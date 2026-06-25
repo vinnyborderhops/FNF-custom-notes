@@ -1,0 +1,12 @@
+{
+  "title": "Character Custom Notes",
+  "description": "Maps player and opponent characters to custom note kinds and note styles.",
+  "contributors": [
+    {
+      "name": "vinnyborderhops"
+    }
+  ],
+  "api_version": "0.8.0",
+  "mod_version": "1.0.0",
+  "license": "Apache-2.0"
+}
