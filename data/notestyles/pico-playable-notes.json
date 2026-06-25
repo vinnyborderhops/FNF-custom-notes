@@ -1,0 +1,101 @@
+{
+  "version": "1.1.0",
+  "name": "Pico Playable Notes",
+  "author": "vinnyborderhops",
+  "fallback": "funkin",
+  "assets": {
+    "note": {
+      "assetPath": "notes/pico-playable/notes",
+      "scale": 0.7,
+      "data": {
+        "left": { "prefix": "noteLeft" },
+        "down": { "prefix": "noteDown" },
+        "up": { "prefix": "noteUp" },
+        "right": { "prefix": "noteRight" }
+      }
+    },
+    "holdNote": {
+      "assetPath": "notes/pico-playable/hold",
+      "scale": 0.7,
+      "data": {}
+    },
+    "noteStrumline": {
+      "assetPath": "notes/pico-playable/strumline",
+      "scale": 0.7,
+      "offsets": [0, 0],
+      "data": {
+        "leftStatic": { "prefix": "staticLeft" },
+        "leftPress": { "prefix": "pressLeft" },
+        "leftConfirm": { "prefix": "confirmLeft" },
+        "leftConfirmHold": { "prefix": "confirmHoldLeft" },
+        "downStatic": { "prefix": "staticDown" },
+        "downPress": { "prefix": "pressDown" },
+        "downConfirm": { "prefix": "confirmDown" },
+        "downConfirmHold": { "prefix": "confirmHoldDown" },
+        "upStatic": { "prefix": "staticUp" },
+        "upPress": { "prefix": "pressUp" },
+        "upConfirm": { "prefix": "confirmUp" },
+        "upConfirmHold": { "prefix": "confirmHoldUp" },
+        "rightStatic": { "prefix": "staticRight" },
+        "rightPress": { "prefix": "pressRight" },
+        "rightConfirm": { "prefix": "confirmRight" },
+        "rightConfirmHold": { "prefix": "confirmHoldRight" }
+      }
+    },
+    "noteSplash": {
+      "assetPath": "notes/pico-playable/splashes",
+      "alpha": 0.8,
+      "offsets": [25, -5],
+      "data": {
+        "enabled": true,
+        "leftSplashes": [
+          { "prefix": "note impact 1 left" },
+          { "prefix": "note impact 2 left" }
+        ],
+        "downSplashes": [
+          { "prefix": "note impact 1  down" },
+          { "prefix": "note impact 2 down" }
+        ],
+        "upSplashes": [
+          { "prefix": "note impact 1 up" },
+          { "prefix": "note impact 2 up" }
+        ],
+        "rightSplashes": [
+          { "prefix": "note impact 1 right" },
+          { "prefix": "note impact 2 right" }
+        ]
+      }
+    },
+    "holdNoteCover": {
+      "assetPath": "",
+      "offsets": [0, 0],
+      "data": {
+        "enabled": true,
+        "left": {
+          "assetPath": "notes/pico-playable/hold-cover-left",
+          "start": { "prefix": "holdCoverStartLeft" },
+          "hold": { "prefix": "holdCoverLeft" },
+          "end": { "prefix": "holdCoverEndLeft" }
+        },
+        "down": {
+          "assetPath": "notes/pico-playable/hold-cover-down",
+          "start": { "prefix": "holdCoverStartDown" },
+          "hold": { "prefix": "holdCoverDown" },
+          "end": { "prefix": "holdCoverEndDown" }
+        },
+        "up": {
+          "assetPath": "notes/pico-playable/hold-cover-up",
+          "start": { "prefix": "holdCoverStartUp" },
+          "hold": { "prefix": "holdCoverUp" },
+          "end": { "prefix": "holdCoverEndUp" }
+        },
+        "right": {
+          "assetPath": "notes/pico-playable/hold-cover-right",
+          "start": { "prefix": "holdCoverStartRight" },
+          "hold": { "prefix": "holdCoverRight" },
+          "end": { "prefix": "holdCoverEndRight" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+import funkin.play.notes.notekind.NoteKind;
+
+class DadNoteKind extends NoteKind
+{
+  public function new()
+  {
+    super("dad-note", "Dad Notes", "dad-notes");
+  }
+}

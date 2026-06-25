@@ -1,0 +1,11 @@
+import funkin.modding.module.Module;
+
+class DadNoteMapping extends Module
+{
+  public function new()
+  {
+    super("note-map-dad", 9999);
+    CharacterNoteStyleMapper.mapOpponent("dad", "dad-note", "dad-notes");
+    active = false;
+  }
+}

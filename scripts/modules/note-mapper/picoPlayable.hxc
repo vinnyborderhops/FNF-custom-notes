@@ -1,0 +1,11 @@
+import funkin.modding.module.Module;
+
+class PicoPlayableNoteMapping extends Module
+{
+  public function new()
+  {
+    super("note-map-pico-playable", 9999);
+    CharacterNoteStyleMapper.mapPlayer("pico-playable", "pico-playable-note", "pico-playable-notes");
+    active = false;
+  }
+}

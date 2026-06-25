@@ -1,0 +1,83 @@
+{
+  "version": "1.1.0",
+  "name": "Dad Notes",
+  "author": "vinnyborderhops",
+  "fallback": "funkin",
+  "assets": {
+    "note": {
+      "assetPath": "notes/dad/notes",
+      "scale": 0.7,
+      "data": {
+        "left": { "prefix": "noteLeft" },
+        "down": { "prefix": "noteDown" },
+        "up": { "prefix": "noteUp" },
+        "right": { "prefix": "noteRight" }
+      }
+    },
+    "holdNote": {
+      "assetPath": "notes/dad/hold",
+      "scale": 0.7,
+      "data": {}
+    },
+    "noteStrumline": {
+      "assetPath": "notes/dad/strumline",
+      "scale": 0.7,
+      "offsets": [0, 0],
+      "data": {
+        "leftStatic": { "prefix": "staticLeft" },
+        "leftPress": { "prefix": "pressLeft" },
+        "leftConfirm": { "prefix": "confirmLeft" },
+        "leftConfirmHold": { "prefix": "confirmHoldLeft" },
+        "downStatic": { "prefix": "staticDown" },
+        "downPress": { "prefix": "pressDown" },
+        "downConfirm": { "prefix": "confirmDown" },
+        "downConfirmHold": { "prefix": "confirmHoldDown" },
+        "upStatic": { "prefix": "staticUp" },
+        "upPress": { "prefix": "pressUp" },
+        "upConfirm": { "prefix": "confirmUp" },
+        "upConfirmHold": { "prefix": "confirmHoldUp" },
+        "rightStatic": { "prefix": "staticRight" },
+        "rightPress": { "prefix": "pressRight" },
+        "rightConfirm": { "prefix": "confirmRight" },
+        "rightConfirmHold": { "prefix": "confirmHoldRight" }
+      }
+    },
+    "noteSplash": {
+      "assetPath": "",
+      "data": {
+        "enabled": false
+      }
+    },
+    "holdNoteCover": {
+      "assetPath": "",
+      "offsets": [0, 0],
+      "data": {
+        "enabled": true,
+        "left": {
+          "assetPath": "notes/dad/hold-cover-left",
+          "start": { "prefix": "holdCoverStartLeft" },
+          "hold": { "prefix": "holdCoverLeft" },
+          "end": { "prefix": "holdCoverEndLeft" }
+        },
+        "down": {
+          "assetPath": "notes/dad/hold-cover-down",
+          "start": { "prefix": "holdCoverStartDown" },
+          "hold": { "prefix": "holdCoverDown" },
+          "end": { "prefix": "holdCoverEndDown" }
+        },
+        "up": {
+          "assetPath": "notes/dad/hold-cover-up",
+          "start": { "prefix": "holdCoverStartUp" },
+          "hold": { "prefix": "holdCoverUp" },
+          "end": { "prefix": "holdCoverEndUp" }
+        },
+        "right": {
+          "assetPath": "notes/dad/hold-cover-right",
+          "start": { "prefix": "holdCoverStartRight" },
+          "hold": { "prefix": "holdCoverRight" },
+          "end": { "prefix": "holdCoverEndRight" }
+        }
+      }
+    }
+  }
+}

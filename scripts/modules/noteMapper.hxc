@@ -1,0 +1,525 @@
+import funkin.Assets;
+import funkin.Conductor;
+import funkin.FunkinMemory;
+import funkin.Paths;
+import funkin.data.notestyle.NoteStyleRegistry;
+import funkin.modding.module.Module;
+import funkin.play.PlayState;
+import funkin.play.notes.NoteHoldCover;
+import funkin.play.notes.NoteSplash;
+import funkin.play.notes.NoteSprite;
+import funkin.play.notes.SustainTrail;
+import funkin.util.Constants;
+
+class CharacterNoteStyleMapper extends Module
+{
+  static var opponentMappings = [];
+  static var playerMappings = [];
+
+  var keepExistingCustomNoteKinds:Bool = false;
+  var clearUnmappedCharacterNotes:Bool = false;
+  var baseStyleId:String = Constants.DEFAULT_NOTE_STYLE;
+  var trackedNotesByStrumline = [[], []];
+  var activeCharacterIds = [null, null];
+
+  public static function mapOpponent(characterId:String, noteKind:String, visualStyleId:String, applyStrumlineStyle:Bool = true):Void
+  {
+    registerMapping(opponentMappings, characterId, noteKind, visualStyleId, applyStrumlineStyle);
+  }
+
+  public static function mapPlayer(characterId:String, noteKind:String, visualStyleId:String, applyStrumlineStyle:Bool = true):Void
+  {
+    registerMapping(playerMappings, characterId, noteKind, visualStyleId, applyStrumlineStyle);
+  }
+
+  public static function mapCharacter(characterId:String, noteKind:String, visualStyleId:String, applyStrumlineStyle:Bool = true):Void
+  {
+    mapOpponent(characterId, noteKind, visualStyleId, applyStrumlineStyle);
+    mapPlayer(characterId, noteKind, visualStyleId, applyStrumlineStyle);
+  }
+
+  static function registerMapping(mappings, characterId:String, noteKind:String, visualStyleId:String, applyStrumlineStyle:Bool):Void
+  {
+    if (characterId == null || characterId == "") return;
+
+    var mapping = {
+      characterId: characterId,
+      noteKind: noteKind,
+      visualStyleId: visualStyleId,
+      applyStrumlineStyle: applyStrumlineStyle
+    };
+
+    for (i in 0...mappings.length)
+    {
+      if (mappings[i] != null && mappings[i].characterId == characterId)
+      {
+        mappings[i] = mapping;
+        return;
+      }
+    }
+
+    mappings.push(mapping);
+  }
+
+  public function new()
+  {
+    super("note-style-mapper", 10);
+  }
+
+  override function onSongLoaded(event:SongLoadScriptEvent):Void
+  {
+    super.onSongLoaded(event);
+
+    if (PlayState.instance == null || PlayState.instance.currentChart == null) return;
+
+    var chart = PlayState.instance.currentChart;
+    if (chart.characters == null) return;
+
+    baseStyleId = chart.noteStyle;
+    if (baseStyleId == null || baseStyleId == "") baseStyleId = Constants.DEFAULT_NOTE_STYLE;
+    trackedNotesByStrumline = [[], []];
+    activeCharacterIds = [null, null];
+
+    preloadMappedNoteStyles();
+
+    for (strumlineIndex in [0, 1])
+    {
+      trackedNotesByStrumline[strumlineIndex] = [];
+      refreshStrumlineForCurrentCharacter(strumlineIndex, true);
+    }
+
+    for (note in event.notes)
+    {
+      if (note == null) continue;
+
+      var strumlineIndex:Int = note.getStrumlineIndex();
+      if (strumlineIndex != 0 && strumlineIndex != 1) continue;
+
+      trackedNotesByStrumline[strumlineIndex].push(note);
+
+      if (keepExistingCustomNoteKinds && note.kind != null && note.kind != "") continue;
+
+      var mapping = getActiveReadyMapping(strumlineIndex);
+      applyKind(note, getMappingNoteKind(mapping));
+    }
+
+    trace('[Custom Notes] opponent=' + getCharacterId(1) + ' player=' + getCharacterId(0));
+  }
+
+  override function onUpdate(event:UpdateScriptEvent):Void
+  {
+    super.onUpdate(event);
+
+    refreshStrumlineForCurrentCharacter(0);
+    refreshStrumlineForCurrentCharacter(1);
+  }
+
+  override function onNoteHit(event:HitNoteScriptEvent):Void
+  {
+    super.onNoteHit(event);
+
+    if (event == null || event.note == null) return;
+
+    var strumlineIndex:Int = event.note.noteData.getStrumlineIndex();
+    var strumline = getStrumlineForIndex(strumlineIndex);
+    var styleId = getVisualStyleForNote(event.note);
+    if (strumline == null || styleId == null) return;
+
+    if (event.doesNotesplash || strumlineIndex == 1)
+    {
+      playCustomNoteSplash(strumline, event.note, styleId);
+      event.doesNotesplash = false;
+    }
+
+    if (event.note.isHoldNote && event.note.holdNoteSprite != null)
+    {
+      playCustomHoldCover(strumline, event.note.holdNoteSprite, styleId);
+    }
+  }
+
+  function refreshStrumlineForCurrentCharacter(strumlineIndex:Int, force:Bool = false):Void
+  {
+    var characterId = getCharacterId(strumlineIndex);
+    if (characterId == null) return;
+    if (!force && activeCharacterIds[strumlineIndex] == characterId) return;
+
+    activeCharacterIds[strumlineIndex] = characterId;
+
+    var mapping = getReadyMapping(strumlineIndex, characterId);
+
+    preloadCustomNoteStyle(getMappingVisualStyleId(mapping));
+    applyStrumlineStyleForMapping(strumlineIndex, mapping);
+    applyKindToFutureNotes(strumlineIndex, getMappingNoteKind(mapping));
+
+    trace('[Custom Notes] ' + getStrumlineName(strumlineIndex) + '=' + characterId + ' kind=' + getMappingNoteKind(mapping));
+  }
+
+  function applyKind(note:Dynamic, kind:String):Void
+  {
+    if (kind != null && kind != "")
+    {
+      note.kind = kind;
+    }
+    else if (clearUnmappedCharacterNotes)
+    {
+      note.kind = null;
+    }
+  }
+
+  function applyKindToFutureNotes(strumlineIndex:Int, kind:String):Void
+  {
+    var notes = trackedNotesByStrumline[strumlineIndex];
+    if (notes == null) return;
+
+    var songPosition = getSongPosition();
+    for (note in notes)
+    {
+      if (note == null || note.time < songPosition) continue;
+      applyKind(note, kind);
+    }
+  }
+
+  function applyStrumlineStyleForMapping(strumlineIndex:Int, mapping:Dynamic):Void
+  {
+    var strumline = getStrumlineForIndex(strumlineIndex);
+    if (strumline == null) return;
+
+    var styleId:String = getMappingVisualStyleId(mapping);
+    var customStyleExists:Bool = isNoteStyleReady(styleId);
+    var applyCustomStyle:Bool = mapping != null && mapping.applyStrumlineStyle && customStyleExists;
+
+    applyStrumlineVisualStyle(strumline, applyCustomStyle ? styleId : baseStyleId);
+
+    strumline.noteHoldCovers.clear();
+    strumline.showNotesplash = !applyCustomStyle;
+  }
+
+  function applyStrumlineVisualStyle(strumline, styleId:String):Void
+  {
+    var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
+    if (noteStyle == null || strumline == null || strumline.strumlineNotes == null) return;
+
+    for (arrow in strumline.strumlineNotes.members)
+    {
+      if (arrow == null) continue;
+
+      arrow.animation.destroyAnimations();
+      noteStyle.applyStrumlineFrames(arrow);
+      noteStyle.applyStrumlineAnimations(arrow, arrow.direction);
+      arrow.scale.set(noteStyle.getStrumlineScale(), noteStyle.getStrumlineScale());
+      arrow.updateHitbox();
+      noteStyle.applyStrumlineOffsets(arrow);
+      arrow.playStatic();
+    }
+  }
+
+  function preloadMappedNoteStyles():Void
+  {
+    for (mapping in opponentMappings)
+    {
+      preloadCustomNoteStyle(getMappingVisualStyleId(mapping));
+    }
+
+    for (mapping in playerMappings)
+    {
+      preloadCustomNoteStyle(getMappingVisualStyleId(mapping));
+    }
+  }
+
+  function preloadCustomNoteStyle(styleId:String):Void
+  {
+    if (styleId == null || styleId == "") return;
+    if (!isNoteStyleReady(styleId)) return;
+
+    var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
+    if (noteStyle == null) return;
+
+    try
+    {
+      FunkinMemory.cacheNoteStyle(noteStyle);
+
+      var note = new NoteSprite(noteStyle, 0);
+      note.destroy();
+
+      var hold = new SustainTrail(0, 1000, noteStyle);
+      hold.destroy();
+
+      if (noteStyle.isNoteSplashEnabled())
+      {
+        var splash = new NoteSplash(noteStyle);
+        splash.destroy();
+      }
+
+      if (noteStyle.isHoldNoteCoverEnabled())
+      {
+        var cover = new NoteHoldCover(noteStyle);
+        cover.destroy();
+      }
+    }
+    catch (error:Dynamic)
+    {
+      trace('[Custom Notes] Could not preload note style ' + styleId + ': ' + error);
+    }
+  }
+
+  function getCharacterId(strumlineIndex:Int):String
+  {
+    if (PlayState.instance == null) return null;
+
+    switch (strumlineIndex)
+    {
+      case 0:
+        if (PlayState.instance.currentStage != null)
+        {
+          var bf = PlayState.instance.currentStage.getBoyfriend();
+          if (bf != null && bf.characterId != null) return bf.characterId;
+        }
+
+        var chart = PlayState.instance.currentChart;
+        if (chart != null && chart.characters != null) return chart.characters.player;
+      case 1:
+        if (PlayState.instance.currentStage != null)
+        {
+          var dad = PlayState.instance.currentStage.getDad();
+          if (dad != null && dad.characterId != null) return dad.characterId;
+        }
+
+        var chart = PlayState.instance.currentChart;
+        if (chart != null && chart.characters != null) return chart.characters.opponent;
+      default:
+    }
+
+    return null;
+  }
+
+  function getMapping(strumlineIndex:Int, characterId:String)
+  {
+    if (characterId == null) return null;
+
+    return switch (strumlineIndex)
+    {
+      case 0: findMapping(playerMappings, characterId);
+      case 1: findMapping(opponentMappings, characterId);
+      default: null;
+    }
+  }
+
+  function findMapping(mappings, characterId:String)
+  {
+    if (mappings == null || characterId == null) return null;
+
+    for (mapping in mappings)
+    {
+      if (mapping != null && mapping.characterId == characterId) return mapping;
+    }
+
+    return null;
+  }
+
+  function getActiveMapping(strumlineIndex:Int)
+  {
+    return getMapping(strumlineIndex, activeCharacterIds[strumlineIndex]);
+  }
+
+  function getReadyMapping(strumlineIndex:Int, characterId:String)
+  {
+    var mapping = getMapping(strumlineIndex, characterId);
+    return isNoteStyleReady(getMappingVisualStyleId(mapping)) ? mapping : null;
+  }
+
+  function getActiveReadyMapping(strumlineIndex:Int)
+  {
+    return getReadyMapping(strumlineIndex, activeCharacterIds[strumlineIndex]);
+  }
+
+  function getStrumlineForIndex(strumlineIndex:Int)
+  {
+    if (PlayState.instance == null) return null;
+
+    return switch (strumlineIndex)
+    {
+      case 0: PlayState.instance.playerStrumline;
+      case 1: PlayState.instance.opponentStrumline;
+      default: null;
+    }
+  }
+
+  function getVisualStyleForNote(note)
+  {
+    if (note == null || note.noteData == null) return null;
+
+    var strumlineIndex:Int = note.noteData.getStrumlineIndex();
+    var mapping = getActiveReadyMapping(strumlineIndex);
+    if (mapping == null || mapping.noteKind == null || mapping.visualStyleId == null) return null;
+
+    return (note.kind == mapping.noteKind) ? mapping.visualStyleId : null;
+  }
+
+  function getMappingNoteKind(mapping):String
+  {
+    if (mapping == null) return null;
+    return mapping.noteKind;
+  }
+
+  function getMappingVisualStyleId(mapping):String
+  {
+    if (mapping == null) return null;
+    return mapping.visualStyleId;
+  }
+
+  function isNoteStyleReady(styleId:String):Bool
+  {
+    if (styleId == null || styleId == "") return false;
+
+    var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
+    if (noteStyle == null) return false;
+
+    if (!imageExists(noteStyle.getNoteAssetPath())) return false;
+    if (!imageExists(noteStyle.getHoldNoteAssetPath(true))) return false;
+    if (!imageExists(noteStyle.getStrumlineAssetPath())) return false;
+
+    if (noteStyle.isNoteSplashEnabled() && !imageExists(noteStyle.getSplashAssetPath())) return false;
+
+    if (noteStyle.isHoldNoteCoverEnabled())
+    {
+      for (direction in 0...4)
+      {
+        if (!imageExists(noteStyle.getHoldCoverDirectionAssetPath(direction))) return false;
+      }
+    }
+
+    return true;
+  }
+
+  function imageExists(assetPath:String):Bool
+  {
+    if (assetPath == null || assetPath == "") return false;
+    return Assets.exists(Paths.image(assetPath));
+  }
+
+  function getStrumlineName(strumlineIndex:Int):String
+  {
+    return strumlineIndex == 0 ? "player" : "opponent";
+  }
+
+  function getSongPosition():Float
+  {
+    try
+    {
+      return Conductor.instance.songPosition;
+    }
+    catch (error:Dynamic)
+    {
+      return 0;
+    }
+  }
+
+  function playCustomNoteSplash(strumline, note, styleId:String):Void
+  {
+    var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
+    if (noteStyle == null || !noteStyle.isNoteSplashEnabled() || strumline == null) return;
+
+    var direction = note.noteData.getDirection();
+
+    var splash = new NoteSplash(noteStyle);
+    strumline.add(splash);
+    splash.play(direction);
+
+    splash.x = strumline.x;
+    splash.x += getStrumlineXPos(strumline, direction);
+    splash.x += getInitialOffset();
+    splash.x += noteStyle.getSplashOffsets()[0] * splash.scale.x;
+
+    splash.y = strumline.y;
+    splash.y -= getInitialOffset();
+    splash.y += noteStyle.getSplashOffsets()[1] * splash.scale.y;
+
+    splash.graphic.destroyOnNoUse = false;
+  }
+
+  function playCustomHoldCover(strumline, holdNote, styleId:String):Void
+  {
+    var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
+    if (noteStyle == null || !noteStyle.isHoldNoteCoverEnabled() || strumline == null) return;
+    if (holdNote.cover != null) return;
+
+    var cover = getCustomHoldCover(strumline, noteStyle);
+    if (cover == null) return;
+
+    cover.holdNote = holdNote;
+    holdNote.cover = cover;
+    cover.visible = true;
+    cover.playStart();
+
+    cover.x = strumline.x;
+    cover.x += getStrumlineXPos(strumline, holdNote.noteDirection);
+    cover.x += getStrumlineSize() / 2;
+    cover.x -= cover.width / 2;
+    cover.x += noteStyle.getHoldCoverOffsets()[0] * cover.scale.x;
+    cover.x += -12;
+
+    cover.y = strumline.y;
+    cover.y += getInitialOffset();
+    cover.y += getStrumlineSize() / 2;
+    cover.y += noteStyle.getHoldCoverOffsets()[1] * cover.scale.y;
+    cover.y += -96;
+  }
+
+  function getCustomHoldCover(strumline, noteStyle)
+  {
+    var covers = strumline.noteHoldCovers;
+    if (covers == null) return null;
+
+    if (covers.length < covers.maxSize)
+    {
+      var cover = new NoteHoldCover(noteStyle);
+      covers.add(cover);
+      return cover;
+    }
+
+    var recycled = covers.getFirstAvailable();
+    if (recycled != null)
+    {
+      recycled.revive();
+      return recycled;
+    }
+
+    var fallback = covers.members[0];
+    if (fallback != null)
+    {
+      fallback.kill();
+      fallback.revive();
+    }
+
+    return fallback;
+  }
+
+  function getStrumlineXPos(strumline, direction):Float
+  {
+    var noteSpacing = getStrumlineSize() + 8;
+    var scale = 1.0;
+    if (strumline != null && strumline.strumlineScale != null) scale = strumline.strumlineScale.x;
+
+    switch (direction)
+    {
+      case 1:
+        return noteSpacing * scale;
+      case 2:
+        return 2 * noteSpacing * scale;
+      case 3:
+        return 3 * noteSpacing * scale;
+      default:
+        return 0;
+    }
+  }
+
+  function getStrumlineSize():Float
+  {
+    return 104;
+  }
+
+  function getInitialOffset():Float
+  {
+    return -0.275 * getStrumlineSize();
+  }
+}
