@@ -1,0 +1,11 @@
+import funkin.modding.module.Module;
+
+class PicoPixelNoteMapping extends Module
+{
+  public function new()
+  {
+    super("note-map-pico-pixel", 9999);
+    CharacterNoteStyleMapper.mapPlayer("pico-pixel", "pico-pixel-note", "pico-pixel-notes");
+    active = false;
+  }
+}

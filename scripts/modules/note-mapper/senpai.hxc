@@ -1,0 +1,11 @@
+import funkin.modding.module.Module;
+
+class SenpaiNoteMapping extends Module
+{
+  public function new()
+  {
+    super("note-map-senpai", 9999);
+    CharacterNoteStyleMapper.mapOpponent("senpai", "senpai-note", "senpai-notes");
+    active = false;
+  }
+}

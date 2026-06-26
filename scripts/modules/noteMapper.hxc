@@ -21,6 +21,7 @@ class CharacterNoteStyleMapper extends Module
   var baseStyleId:String = Constants.DEFAULT_NOTE_STYLE;
   var trackedNotesByStrumline = [[], []];
   var activeCharacterIds = [null, null];
+  var appliedStrumlineOffsets:Array<Array<Float>> = [[0.0, 0.0], [0.0, 0.0]];
 
   public static function mapOpponent(characterId:String, noteKind:String, visualStyleId:String, applyStrumlineStyle:Bool = true):Void
   {
@@ -79,6 +80,7 @@ class CharacterNoteStyleMapper extends Module
     if (baseStyleId == null || baseStyleId == "") baseStyleId = Constants.DEFAULT_NOTE_STYLE;
     trackedNotesByStrumline = [[], []];
     activeCharacterIds = [null, null];
+    appliedStrumlineOffsets = [getStrumlineOffsetsForStyle(baseStyleId), getStrumlineOffsetsForStyle(baseStyleId)];
 
     preloadMappedNoteStyles();
 
@@ -188,20 +190,26 @@ class CharacterNoteStyleMapper extends Module
     var customStyleExists:Bool = isNoteStyleReady(styleId);
     var applyCustomStyle:Bool = mapping != null && mapping.applyStrumlineStyle && customStyleExists;
 
-    applyStrumlineVisualStyle(strumline, applyCustomStyle ? styleId : baseStyleId);
+    applyStrumlineVisualStyle(strumlineIndex, strumline, applyCustomStyle ? styleId : baseStyleId);
 
     strumline.noteHoldCovers.clear();
     strumline.showNotesplash = !applyCustomStyle;
   }
 
-  function applyStrumlineVisualStyle(strumline, styleId:String):Void
+  function applyStrumlineVisualStyle(strumlineIndex:Int, strumline, styleId:String):Void
   {
     var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
     if (noteStyle == null || strumline == null || strumline.strumlineNotes == null) return;
 
+    var previousOffsets = getAppliedStrumlineOffsets(strumlineIndex);
+
     for (arrow in strumline.strumlineNotes.members)
     {
       if (arrow == null) continue;
+
+      // The engine already applied the current style's offsets when it built the strumline.
+      arrow.x -= previousOffsets[0];
+      arrow.y -= previousOffsets[1];
 
       arrow.animation.destroyAnimations();
       noteStyle.applyStrumlineFrames(arrow);
@@ -211,6 +219,29 @@ class CharacterNoteStyleMapper extends Module
       noteStyle.applyStrumlineOffsets(arrow);
       arrow.playStatic();
     }
+
+    appliedStrumlineOffsets[strumlineIndex] = getStrumlineOffsetsForStyle(styleId);
+  }
+
+  function getAppliedStrumlineOffsets(strumlineIndex:Int):Array<Float>
+  {
+    if (appliedStrumlineOffsets == null) return [0.0, 0.0];
+
+    var offsets = appliedStrumlineOffsets[strumlineIndex];
+    if (offsets == null || offsets.length < 2) return [0.0, 0.0];
+
+    return [offsets[0], offsets[1]];
+  }
+
+  function getStrumlineOffsetsForStyle(styleId:String):Array<Float>
+  {
+    var noteStyle = NoteStyleRegistry.instance.fetchEntry(styleId);
+    if (noteStyle == null) return [0.0, 0.0];
+
+    var offsets = noteStyle.getStrumlineOffsets();
+    if (offsets == null || offsets.length < 2) return [0.0, 0.0];
+
+    return [offsets[0], offsets[1]];
   }
 
   function preloadMappedNoteStyles():Void

@@ -1,0 +1,9 @@
+import funkin.play.notes.notekind.NoteKind;
+
+class PicoPixelNoteKind extends NoteKind
+{
+  public function new()
+  {
+    super("pico-pixel-note", "Pico Pixel Notes", "pico-pixel-notes");
+  }
+}

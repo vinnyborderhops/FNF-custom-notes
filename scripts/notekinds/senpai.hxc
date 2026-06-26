@@ -1,0 +1,9 @@
+import funkin.play.notes.notekind.NoteKind;
+
+class SenpaiNoteKind extends NoteKind
+{
+  public function new()
+  {
+    super("senpai-note", "Senpai Notes", "senpai-notes");
+  }
+}
